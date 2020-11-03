@@ -35,17 +35,9 @@ const getUsers= async (req,res)=>{
  
     res.status(200).json(response.rows);
 };
- 
-const getTutor= async (req,res)=>{
-    const type = "1";
-    const response = await pool.query('SELECT * FROM public.user WHERE user_type=$1',[type]);
- 
-    res.status(200).json(response.rows);
-};
- 
 
+// CODIGO FUNCIONANDO
 
-// HASTA ACA ESTA BIEN EL JWT 
 const login = async (req,res)=> {
     
     const {email,password}= req.body;
@@ -72,7 +64,7 @@ const protec = (req,res)=>{
         }
  
     });
-}
+};
  
 function ensureToken (req ,res, next){
     const bearerHeader = req.headers['authorization'];
@@ -85,14 +77,28 @@ function ensureToken (req ,res, next){
     }else{
        res.sendStatus(403); 
     }    
-}
+};
  
- 
+const getTutors= async(req,res) =>{
+    const subject = req.params.subjectId;
+    const response = await pool.query('SELECT name,email,phone,picture FROM public.user INNER JOIN public.tutor ON public.tutor.user_id = public.user.user_id WHERE topic_id = $1',[subject]);
+
+    res.status(200).json(response.rows);
+    console.log(subject);
+
+};
+
+const getSubject = async (req,res) => {
+    const response = await pool.query('SELECT * FROM public.subject')
+    res.status(200).json(response.rows);
+};
+
 module.exports = {
         getUsers,
-        getTutor,
         createUsers,
         login,
         protec,
-        ensureToken
+        ensureToken,
+        getTutors,
+        getSubject
 }

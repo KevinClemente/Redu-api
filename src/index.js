@@ -11,5 +11,5 @@ app.use(express.urlencoded({extended:false})); //urlencode se utiliza para  inte
 //Routes
 app.use(require('./routes/index'));
 
-app.listen(3000);
+app.listen(process.env.PORT||3000);
 console.log('server on port 3000');

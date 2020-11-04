@@ -37,7 +37,6 @@ const getUsers= async (req,res)=>{
 };
 
 // CODIGO FUNCIONANDO
-
 const login = async (req,res)=> {
     
     const {email,password}= req.body;
@@ -80,11 +79,20 @@ function ensureToken (req ,res, next){
 };
  
 const getTutors= async(req,res) =>{
+    
     const subject = req.params.subjectId;
     const response = await pool.query('SELECT name,email,phone,picture FROM public.user INNER JOIN public.tutor ON public.tutor.user_id = public.user.user_id WHERE topic_id = $1',[subject]);
 
-    res.status(200).json(response.rows);
-    console.log(subject);
+    jwt.verify(req.token,'my_secret_key',(err,data)=>{
+        if(err){
+            res.sendStatus(403);
+        }else{
+            res.status(200).json(response.rows);
+        }
+ 
+    });
+    
+   
 
 };
 

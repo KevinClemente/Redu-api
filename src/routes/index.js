@@ -5,14 +5,16 @@ const jwt = require('jsonwebtoken');
 const {getUsers, createUsers,login,ensureToken,protec,getTutors,getSubject} = require('../controllers/index.controller');
  
 //asignando rutas
-router.get('/users', getUsers); //de aca se cortaron las funciones de ./controllers/index.controller
+router.get('/users', getUsers); 
 router.post('/singup', createUsers);
-router.post('/singin', login); 
+router.post('/login', login); 
 router.get('/profile',ensureToken,protec);
+
+//pantalla de inicio con las tarjetas
 router.get('/home',getSubject)
 
 //tutores por categoria
-router.get('/subjects/tutors/:subjectId',getTutors);
+router.get('/subjects/tutors/:subjectId',ensureToken,getTutors);
 router.get('/subjects/tutors/1',getTutors); 
  
 module.exports = router;

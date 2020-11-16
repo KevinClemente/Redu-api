@@ -41,14 +41,29 @@ const login = async (req,res)=> {
     
     const {email,password}= req.body;
     const pass= await bcrypt.hash(password,10);
-    await pool.query('SELECT email,password FROM public.user WHERE email=$1 AND password=$2',[email,password])
+    const response = await pool.query('SELECT email,password,user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
+    const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
+    const userID=userId.rows[0];
+    const token = jwt.sign({email,password,userID},'my_secret_key');
+
+    if(response.rowCount==0)
+        res.send({"error":"incorrect username or password"})
+        
+    else
+        
+        res.status(200).json({"MESSAGE":"Logged in successfully!",token});
+        pool.end();
+
+    //ni me acuerdo porque hice esto pero ya no funciono xD  
+    /*await pool.query('SELECT email,password,user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
     .then(response=>{
-            const token = jwt.sign({email,password},'my_secret_key');
+            const token = jwt.sign({email,password,user_id},'my_secret_key');
             res.json({
-                email:{email,pass},token});})
+                Credential:{email,password},token});})
     .catch(err=>{
             pool.end();
-                })
+                }) */
+    
 };
  
 const protec = (req,res)=>{
@@ -87,7 +102,7 @@ const getTutors= async(req,res) =>{
         if(err){
             res.sendStatus(403);
         }else{
-            res.status(200).json(response.rows);
+            res.status(200).json(response.rows,data);
         }
  
     });
@@ -98,8 +113,59 @@ const getTutors= async(req,res) =>{
 
 const getSubject = async (req,res) => {
     const response = await pool.query('SELECT * FROM public.subject')
-    res.status(200).json(response.rows);
+    
+    jwt.verify(req.token,'my_secret_key',(err,data)=>{
+        if(err){
+            res.sendStatus(403);
+        }else{
+            res.status(200).json(response.rows);
+        }
+ 
+    });
+    
 };
+
+const setDate = async (req,res) => {
+    const {tutor_id,status,type,date,user_id} = req.body;
+    //const user_id = 1;
+    //{"tutor_id":"1","status":"true","type":"true","date":"11/10/11","user_id":"1"}
+    const response = await pool.query('INSERT INTO session (tutor_id,status,type,date,user_id) VALUES ($1,$2,$3,$4,$5)', [tutor_id,status,type,date,user_id]);
+    jwt.verify(req.token,'my_secret_key',(err,data)=>{
+        if(err){
+            res.sendStatus(403);
+        }else{
+            
+            /*const date =  (req.token,res) => {
+                const user_id = data.userID
+               /* const {tutor_id,status,type,date} = req.body;
+                const user_id = data.userID
+                const response = await pool.query('INSERT INTO public.session (tutor_id,user_id,status,type,date) VALUES ($1,$2,$3,$4,$5)', [tutor_id,user_id,status,type,date]);
+              */ 
+            res.status(200).send("DATOS INGRESADOS CORRECTAMENTE");
+                    
+        }
+            
+        
+ 
+    });
+    
+};
+
+
+const getDates = async (req,res) => {
+    const response = await pool.query('SELECT * FROM public.session')
+    
+    jwt.verify(req.token,'my_secret_key',(err,data)=>{
+        if(err){
+            res.sendStatus(403);
+        }else{
+            res.status(200).json(response.rows);
+        }
+ 
+    });
+    
+};
+
 
 module.exports = {
         getUsers,
@@ -108,5 +174,7 @@ module.exports = {
         protec,
         ensureToken,
         getTutors,
-        getSubject
+        getSubject,
+        setDate,
+        getDates
 }

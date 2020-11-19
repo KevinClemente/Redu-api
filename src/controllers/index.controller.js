@@ -17,16 +17,46 @@ port:'5432'
 //pero para ser asincrona a la funcion tambien se le debe colocar Async
  
 const createUsers= async (req,res)=>{
-    const {user_type,phone,name,email,password} = req.body; //para indicarle cuales campos contiene el Json
-    const response = await pool.query('INSERT INTO public.user (user_type,phone,name,email,password) VALUES ($1,$2,$3,$4,$5)', [user_type,phone,name,email,password]);
-    console.log(response);
-    res.json({
-        message: 'WELCOME',
-    
-        body:{
-            user: {name,email}
-        }
-    });
+    const {phone,name,email,password,picture} = req.body; //para indicarle cuales campos contiene el Json
+    const user_type = 1;
+    const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1',[email]);
+    if (userId.rowCount == 0){
+        const response = await pool.query('INSERT INTO public.user (user_type,phone,name,email,password,picture) VALUES ($1,$2,$3,$4,$5,$6)', [user_type,phone,name,email,password,picture]);
+        res.json({
+            message: 'WELCOME',
+        
+            body:{
+                user: {name,email}
+            }
+        });
+    }
+    else
+    {
+        res.send('USUARIO YA REGISTRADO PRUEBE CON OTRO CORREO')
+    }
+};
+
+const createTutor= async (req,res)=>{
+    const {phone,name,email,password,lat,lon,topic_id} = req.body; //para indicarle cuales campos contiene el Json
+    const user_type = 2;
+    const val = await pool.query('SELECT user_id FROM public.user WHERE email=$1',[email]);
+    if (val.rowCount == 0){
+        const response = await pool.query('INSERT INTO public.user (user_type,phone,name,email,password) VALUES ($1,$2,$3,$4,$5)', [user_type,phone,name,email,password]);
+        const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
+        const useres = userId.rows[0].user_id;
+        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,topic_id) VALUES ($1,$2,$3,$4)', [parseInt(useres,10),lat,lon,topic_id]);
+              
+        res.json({
+            message: 'WELCOME NOW YOU ARE A TUTOR',
+        
+            body:{
+                user: {name,email}
+            }
+        });
+    }
+    else{
+        res.send ('USUARIO YA REGISTRADO PRUEBE CON OTRO CORREO')
+    }
 };
  
 const getUsers= async (req,res)=>{
@@ -36,15 +66,15 @@ const getUsers= async (req,res)=>{
     res.status(200).json(response.rows);
 };
 
-// CODIGO FUNCIONANDO
 const login = async (req,res)=> {
     
     const {email,password}= req.body;
     const pass= await bcrypt.hash(password,10);
     const response = await pool.query('SELECT email,password,user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
-    const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
-    const userID=userId.rows[0];
+    const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
+    const userID=userId.rows[0].user_id;
     const token = jwt.sign({email,password,userID},'my_secret_key');
+   
 
     if(response.rowCount==0)
         res.send({"error":"incorrect username or password"})
@@ -52,7 +82,7 @@ const login = async (req,res)=> {
     else
         
         res.status(200).json({"MESSAGE":"Logged in successfully!",token});
-        pool.end();
+        
 
     //ni me acuerdo porque hice esto pero ya no funciono xD  
     /*await pool.query('SELECT email,password,user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
@@ -62,8 +92,7 @@ const login = async (req,res)=> {
                 Credential:{email,password},token});})
     .catch(err=>{
             pool.end();
-                }) */
-    
+                }) */  
 };
  
 const protec = (req,res)=>{
@@ -106,8 +135,6 @@ const getTutors= async(req,res) =>{
         }
  
     });
-    
-   
 
 };
 
@@ -117,6 +144,7 @@ const getSubject = async (req,res) => {
     jwt.verify(req.token,'my_secret_key',(err,data)=>{
         if(err){
             res.sendStatus(403);
+            //res.render('login');
         }else{
             res.status(200).json(response.rows);
         }
@@ -134,18 +162,9 @@ const setDate = async (req,res) => {
         if(err){
             res.sendStatus(403);
         }else{
-            
-            /*const date =  (req.token,res) => {
-                const user_id = data.userID
-               /* const {tutor_id,status,type,date} = req.body;
-                const user_id = data.userID
-                const response = await pool.query('INSERT INTO public.session (tutor_id,user_id,status,type,date) VALUES ($1,$2,$3,$4,$5)', [tutor_id,user_id,status,type,date]);
-              */ 
-            res.status(200).send("DATOS INGRESADOS CORRECTAMENTE");
-                    
+
+            res.status(200).send("DATOS INGRESADOS CORRECTAMENTE");         
         }
-            
-        
  
     });
     
@@ -169,6 +188,7 @@ const getDates = async (req,res) => {
 
 module.exports = {
         getUsers,
+        createTutor,
         createUsers,
         login,
         protec,
@@ -177,4 +197,6 @@ module.exports = {
         getSubject,
         setDate,
         getDates
-}
+};
+
+//CODIGO APARENTEMENTE FUNCIONANDO

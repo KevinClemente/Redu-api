@@ -59,9 +59,9 @@ const createTutor= async (req,res)=>{
     }
 };
  
-const getUsers= async (req,res)=>{
+const getTutorMaps= async (req,res)=>{
  
-    const response = await pool.query('SELECT * FROM public.user');
+    const response = await pool.query('SELECT name,email,phone,picture,lat,lon, profession FROM public.user INNER JOIN public.tutor ON public.tutor.user_id = public.user.user_id ');
  
     res.status(200).json(response.rows);
 };
@@ -155,14 +155,15 @@ const getSubject = async (req,res) => {
 
 const setDate = async (req,res) => {
     const {tutor_id,status,type,date,user_id} = req.body;
+    //const user_id = req.data.userID;
     //const user_id = 1;
     //{"tutor_id":"1","status":"true","type":"true","date":"11/10/11","user_id":"1"}
+    
     const response = await pool.query('INSERT INTO session (tutor_id,status,type,date,user_id) VALUES ($1,$2,$3,$4,$5)', [tutor_id,status,type,date,user_id]);
     jwt.verify(req.token,'my_secret_key',(err,data)=>{
         if(err){
             res.sendStatus(403);
         }else{
-
             res.status(200).send("DATOS INGRESADOS CORRECTAMENTE");         
         }
  
@@ -170,9 +171,9 @@ const setDate = async (req,res) => {
     
 };
 
-
 const getDates = async (req,res) => {
-    const response = await pool.query('SELECT * FROM public.session')
+    const user_id = req.body;
+    const response = await pool.query('SELECT * FROM public.session WHERE user_id = $1', [user_id])
     
     jwt.verify(req.token,'my_secret_key',(err,data)=>{
         if(err){
@@ -187,7 +188,7 @@ const getDates = async (req,res) => {
 
 
 module.exports = {
-        getUsers,
+        getTutorMaps,
         createTutor,
         createUsers,
         login,

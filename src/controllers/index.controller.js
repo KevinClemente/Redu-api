@@ -38,6 +38,7 @@ const createUsers= async (req,res)=>{
     }
 };
 
+
 const createTutor= async (req,res)=>{
     const {phone,name,email,password,lat,lon,topic_id,profession,subject_id} = req.body; //para indicarle cuales campos contiene el Json
     const user_type = 2;
@@ -52,7 +53,12 @@ const createTutor= async (req,res)=>{
         const tutorId = await pool.query('SELECT tutor_id FROM public.user INNER JOIN public.tutor ON public.user.user_id = public.tutor.user_id WHERE public.tutor.user_id = $1',[parseInt(useres,10)]);
         const tutorID = tutorId.rows[0].tutor_id;
         //Se le agrego el subject_id que será el tema en el que desean desarrollarse como tutores y esto se inserta junto con el id del nuevo tutor a la taba tutor_x_subject
-        const sub = await pool.query('INSERT INTO public.tutor_x_subject (tutor_id,subject_id) VALUES ($1,$2)', [parseInt(tutorID,10),subject_id])  
+
+            for (const type of subject_id) 
+                {  
+                const proof = await pool.query('INSERT INTO public.tutor_x_subject (tutor_id,subject_id) VALUES ($1,$2)',[parseInt(tutorID,10),type]);
+                }
+
         res.json({
             message: 'WELCOME NOW YOU ARE A TUTOR',
         
@@ -186,6 +192,13 @@ const getDates = async (req,res) => {
     
 };
 
+const prueba = (req,res) =>{
+    const hola = req.params.id + 1;
+    
+    console.log(hola);
+    
+    };
+
 
 module.exports = {
         getTutorMaps,
@@ -197,7 +210,9 @@ module.exports = {
         getTutors,
         getSubject,
         setDate,
-        getDates
+        getDates,
+        prueba
 };
+
 
 //CODIGO APARENTEMENTE FUNCIONANDO

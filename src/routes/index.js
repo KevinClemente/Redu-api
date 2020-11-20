@@ -2,7 +2,7 @@ const {Router} = require('express'); //voy a importar algo del modulo express y 
 const router  = Router() //esto lo guardare en una constante llamada router tambien pero en minuscula
 const jwt = require('jsonwebtoken');
 //importando funciones
-const {getTutorMaps, createUsers,login,ensureToken,protec,getTutors,getSubject,setDate,getDates,createTutor} = require('../controllers/index.controller');
+const {getTutorMaps, createUsers,login,ensureToken,protec,getTutors,getSubject,setDate,getDates,createTutor,prueba} = require('../controllers/index.controller');
  
 //asignando rutas
 router.get('/maps',ensureToken, getTutorMaps); 
@@ -15,5 +15,6 @@ router.get('/subjects/:subjectId',ensureToken,getTutors);
 router.post('/session',ensureToken,setDate);
 router.get('/dates',ensureToken,getDates) 
 router.post('/singup-tutor', createTutor);
+router.get('/prueba/:id',prueba);
 
 module.exports = router;

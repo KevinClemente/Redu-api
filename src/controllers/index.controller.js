@@ -39,7 +39,7 @@ const createUsers= async (req,res)=>{
 };
 
 const createTutor= async (req,res)=>{
-    const {phone,name,email,password,lat,lon,topic_id,profession} = req.body; //para indicarle cuales campos contiene el Json
+    const {phone,name,email,password,lat,lon,topic_id,profession,subject_id} = req.body; //para indicarle cuales campos contiene el Json
     const user_type = 2;
     const val = await pool.query('SELECT user_id FROM public.user WHERE email=$1',[email]);
     if (val.rowCount == 0){
@@ -47,7 +47,12 @@ const createTutor= async (req,res)=>{
         const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
         const useres = userId.rows[0].user_id;
         const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,topic_id,profession) VALUES ($1,$2,$3,$4,$5)', [parseInt(useres,10),lat,lon,topic_id,profession]);
-              
+        
+        //Captura el id del nuevo tutor registrado para asignarselo a la tabla tutor_x_subject de forma manual
+        const tutorId = await pool.query('SELECT tutor_id FROM public.user INNER JOIN public.tutor ON public.user.user_id = public.tutor.user_id WHERE public.tutor.user_id = $1',[parseInt(useres,10)]);
+        const tutorID = tutorId.rows[0].tutor_id;
+        //Se le agrego el subject_id que será el tema en el que desean desarrollarse como tutores y esto se inserta junto con el id del nuevo tutor a la taba tutor_x_subject
+        const sub = await pool.query('INSERT INTO public.tutor_x_subject (tutor_id,subject_id) VALUES ($1,$2)', [parseInt(tutorID,10),subject_id])  
         res.json({
             message: 'WELCOME NOW YOU ARE A TUTOR',
         
@@ -71,37 +76,26 @@ const getTutorMaps= async (req,res)=>{
 };
 
 const login = async (req,res)=> {
-    
-    const {email,password}= req.body;
+
+     const {email,password}= req.body;
     const pass= await bcrypt.hash(password,10);
     const userId = await pool.query('SELECT * FROM public.user WHERE email=$1 AND password=$2',[email,password]);
-    const name = userId.rows[0].name;
-    const correo = userId.rows[0].email;
-    const picture = userId.rows[0].picture;
-    const phone = userId.rows[0].phone;
-    const userID=userId.rows[0].user_id;
-    const token = jwt.sign({email,password,userID},'my_secret_key');
-   
+
 
     if(userId.rowCount==0)
-    res
-    .status(500)
-    .json({ message: "USUARIO NO REGISTRADO, CORREO INCORRECTO, PRUEBE CON OTRO CORREO" });
-        
+        {
+        res
+        .status(500)
+        .json({ message: "USUARIO NO REGISTRADO, CORREO INCORRECTO, PRUEBE CON OTRO CORREO" });
+        }
     else
-        
-        res.status(200).json({"MESSAGE":"Logged in successfully!",token,name,correo,picture,phone});
-        
+        {
+        const user = userId.rows[0];
+        const token = jwt.sign({email,password},'my_secret_key');
+        res.status(200).json({"MESSAGE":"Logged in successfully!",token,user});
+        }
+       
 
-    //ni me acuerdo porque hice esto pero ya no funciono xD  
-    /*await pool.query('SELECT email,password,user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
-    .then(response=>{
-            const token = jwt.sign({email,password,user_id},'my_secret_key');
-            res.json({
-                Credential:{email,password},token});})
-    .catch(err=>{
-            pool.end();
-                }) */  
 };
  
 const protec = (req,res)=>{
@@ -135,7 +129,7 @@ function ensureToken (req ,res, next){
 const getTutors= async(req,res) =>{
     
     const subject = req.params.subjectId;
-    const response = await pool.query('SELECT name,email,phone,picture FROM public.user INNER JOIN public.tutor ON public.tutor.user_id = public.user.user_id WHERE topic_id = $1',[subject]);
+    const response = await pool.query('SELECT public.user.name,public.user.email , public.user.phone, public.user.picture, public.tutor.profession, public.tutor.rating  FROM public.user INNER JOIN public.tutor ON (public.user.user_id = public.tutor.user_id ) INNER JOIN Public.tutor_x_subject ON (public.tutor.tutor_id = public.tutor_x_subject.tutor_id ) INNER JOIN public.subject ON (public.tutor_x_subject.subject_id = public.subject.subject_id ) WHERE public.subject.subject_id = $1',[subject]);
 
     jwt.verify(req.token,'my_secret_key',(err,data)=>{
         if(err){

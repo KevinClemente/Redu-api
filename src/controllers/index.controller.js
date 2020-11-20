@@ -32,19 +32,21 @@ const createUsers= async (req,res)=>{
     }
     else
     {
-        res.send('USUARIO YA REGISTRADO PRUEBE CON OTRO CORREO')
+        res
+      .status(500)
+      .json({ message: "USUARIO YA REGISTRADO PRUEBE CON OTRO CORREO" });
     }
 };
 
 const createTutor= async (req,res)=>{
-    const {phone,name,email,password,lat,lon,topic_id} = req.body; //para indicarle cuales campos contiene el Json
+    const {phone,name,email,password,lat,lon,topic_id,profession} = req.body; //para indicarle cuales campos contiene el Json
     const user_type = 2;
     const val = await pool.query('SELECT user_id FROM public.user WHERE email=$1',[email]);
     if (val.rowCount == 0){
         const response = await pool.query('INSERT INTO public.user (user_type,phone,name,email,password) VALUES ($1,$2,$3,$4,$5)', [user_type,phone,name,email,password]);
         const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
         const useres = userId.rows[0].user_id;
-        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,topic_id) VALUES ($1,$2,$3,$4)', [parseInt(useres,10),lat,lon,topic_id]);
+        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,topic_id,profession) VALUES ($1,$2,$3,$4,$5)', [parseInt(useres,10),lat,lon,topic_id,profession]);
               
         res.json({
             message: 'WELCOME NOW YOU ARE A TUTOR',
@@ -55,7 +57,9 @@ const createTutor= async (req,res)=>{
         });
     }
     else{
-        res.send ('USUARIO YA REGISTRADO PRUEBE CON OTRO CORREO')
+        res
+      .status(500)
+      .json({ message: "USUARIO YA REGISTRADO PRUEBE CON OTRO CORREO" });
     }
 };
  
@@ -70,18 +74,23 @@ const login = async (req,res)=> {
     
     const {email,password}= req.body;
     const pass= await bcrypt.hash(password,10);
-    const response = await pool.query('SELECT email,password,user_id FROM public.user WHERE email=$1 AND password=$2',[email,password])
-    const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
+    const userId = await pool.query('SELECT * FROM public.user WHERE email=$1 AND password=$2',[email,password]);
+    const name = userId.rows[0].name;
+    const correo = userId.rows[0].email;
+    const picture = userId.rows[0].picture;
+    const phone = userId.rows[0].phone;
     const userID=userId.rows[0].user_id;
     const token = jwt.sign({email,password,userID},'my_secret_key');
    
 
-    if(response.rowCount==0)
-        res.send({"error":"incorrect username or password"})
+    if(userId.rowCount==0)
+    res
+    .status(500)
+    .json({ message: "USUARIO NO REGISTRADO, CORREO INCORRECTO, PRUEBE CON OTRO CORREO" });
         
     else
         
-        res.status(200).json({"MESSAGE":"Logged in successfully!",token});
+        res.status(200).json({"MESSAGE":"Logged in successfully!",token,name,correo,picture,phone});
         
 
     //ni me acuerdo porque hice esto pero ya no funciono xD  
@@ -121,7 +130,8 @@ function ensureToken (req ,res, next){
        res.sendStatus(403); 
     }    
 };
- 
+
+//ACA HAY QUE ARREGLAR ESTA CONSULTA
 const getTutors= async(req,res) =>{
     
     const subject = req.params.subjectId;
@@ -140,16 +150,12 @@ const getTutors= async(req,res) =>{
 
 const getSubject = async (req,res) => {
     const response = await pool.query('SELECT * FROM public.subject')
-    
-    jwt.verify(req.token,'my_secret_key',(err,data)=>{
-        if(err){
+        if(response == false){
             res.sendStatus(403);
-            //res.render('login');
         }else{
             res.status(200).json(response.rows);
         }
- 
-    });
+
     
 };
 

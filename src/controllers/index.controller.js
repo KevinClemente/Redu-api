@@ -2,6 +2,7 @@
 const {Pool} = require ('pg'); //pool es un conjunto de conexiones que pueden usar a medida que se van haciendo peticiones
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const moment = require('moment');
 
 //esto sirve para realizar la conexion a nuestra base de datos lo guardamos en una constante
 const pool = new Pool({
@@ -40,15 +41,14 @@ const createUsers= async (req,res)=>{
 
 
 const createTutor= async (req,res)=>{
-    const {phone,name,email,password,lat,lon,topic_id,profession,subject_id} = req.body; //para indicarle cuales campos contiene el Json
+    const {phone,name,email,password,lat,lon,profession,subject_id,description,consult_day,begin_conslut,end_consult} = req.body; //para indicarle cuales campos contiene el Json
     const user_type = 2;
     const val = await pool.query('SELECT user_id FROM public.user WHERE email=$1',[email]);
     if (val.rowCount == 0){
         const response = await pool.query('INSERT INTO public.user (user_type,phone,name,email,password) VALUES ($1,$2,$3,$4,$5)', [user_type,phone,name,email,password]);
         const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
         const useres = userId.rows[0].user_id;
-        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,topic_id,profession) VALUES ($1,$2,$3,$4,$5)', [parseInt(useres,10),lat,lon,topic_id,profession]);
-        
+        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,profession,description,consult_day,bagin_consult,end_consult) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [parseInt(useres,10),lat,lon,profession,description,consult_day,begin_conslut,end_consult]);
         //Captura el id del nuevo tutor registrado para asignarselo a la tabla tutor_x_subject de forma manual
         const tutorId = await pool.query('SELECT tutor_id FROM public.user INNER JOIN public.tutor ON public.user.user_id = public.tutor.user_id WHERE public.tutor.user_id = $1',[parseInt(useres,10)]);
         const tutorID = tutorId.rows[0].tutor_id;
@@ -131,17 +131,17 @@ function ensureToken (req ,res, next){
     }    
 };
 
-//ACA HAY QUE ARREGLAR ESTA CONSULTA
 const getTutors= async(req,res) =>{
     
     const subject = req.params.subjectId;
     const response = await pool.query('SELECT public.user.name,public.user.email , public.user.phone, public.user.picture, public.tutor.profession, public.tutor.rating  FROM public.user INNER JOIN public.tutor ON (public.user.user_id = public.tutor.user_id ) INNER JOIN Public.tutor_x_subject ON (public.tutor.tutor_id = public.tutor_x_subject.tutor_id ) INNER JOIN public.subject ON (public.tutor_x_subject.subject_id = public.subject.subject_id ) WHERE public.subject.subject_id = $1',[subject]);
 
+    
     jwt.verify(req.token,'my_secret_key',(err,data)=>{
         if(err){
             res.sendStatus(403);
         }else{
-            res.status(200).json(response.rows,data);
+            res.status(200).json(response.rows);
         }
  
     });
@@ -161,19 +161,25 @@ const getSubject = async (req,res) => {
 
 const setDate = async (req,res) => {
     const {tutor_id,status,type,date,user_id} = req.body;
-    //const user_id = req.data.userID;
-    //const user_id = 1;
+    const end_room = moment().add(2, 'days').format('YYYY-MM-DD HH:mm:ss'); 
+    
     //{"tutor_id":"1","status":"true","type":"true","date":"11/10/11","user_id":"1"}
     
     const response = await pool.query('INSERT INTO session (tutor_id,status,type,date,user_id) VALUES ($1,$2,$3,$4,$5)', [tutor_id,status,type,date,user_id]);
-    jwt.verify(req.token,'my_secret_key',(err,data)=>{
-        if(err){
-            res.sendStatus(403);
-        }else{
-            res.status(200).send("DATOS INGRESADOS CORRECTAMENTE");         
-        }
- 
-    });
+    
+    const verify = await pool.query('SELECT * FROM public.room WHERE room.tutor_id=$1 AND room.user_id = $2',[tutor_id,user_id]); 
+    
+    if(verify.rowCount == 0){
+        //INSERT
+        const room = await pool.query('INSERT INTO room (tutor_id,user_id,end_room) VALUES ($1,$2,$3)', [tutor_id,user_id,end_room]);
+        res.status(200).send("SESSION RESERVADA CORRECTAMENTE TIENES 2 DIAS DE CHAT ILIMITADO"); 
+        
+    }else {
+        //UPDATE
+        const room = await pool.query('UPDATE public.room SET end_room=$1  WHERE tutor_id = $2 AND user_id = $3', [end_room,tutor_id,user_id]);
+        res.status(200).send("BIENVENIDO NUEVAMENTE HEMOS HABILITADO 2 DIAS MAS DE CHAT ILIMITADO"); 
+        
+    }
     
 };
 
@@ -193,9 +199,14 @@ const getDates = async (req,res) => {
 };
 
 const prueba = (req,res) =>{
-    const hola = req.params.id + 1;
+
+
+    //console.log(moment().format('MMMM Do YYYY HH:mm:ss'));
+    const date = moment().add(2, 'days').format('YYYY-MM-DD HH:mm:ss');
     
-    console.log(hola);
+    //var from = moment(dateFrom, hora)
+    //const now = moment(date).add(7, 'days')
+    console.log(date);
     
     };
 
@@ -215,4 +226,4 @@ module.exports = {
 };
 
 
-//CODIGO APARENTEMENTE FUNCIONANDO
+

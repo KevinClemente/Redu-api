@@ -12,9 +12,9 @@ router.get('/profile',ensureToken,protec);
 router.get('/home',getSubject);
 router.get('/subjects/:subjectId',ensureToken,getTutors);
 //router.get('/subjects/1',getTutors); 
-router.post('/session',ensureToken,setDate);
+router.post('/session',setDate);
 router.get('/dates',ensureToken,getDates) 
 router.post('/singup-tutor', createTutor);
-router.get('/prueba/:id',prueba);
+router.get('/prueba',prueba);
 
 module.exports = router;

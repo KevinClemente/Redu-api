@@ -41,14 +41,14 @@ const createUsers= async (req,res)=>{
 
 
 const createTutor= async (req,res)=>{
-    const {phone,name,email,password,lat,lon,profession,subject_id,description,consult_day,begin_conslut,end_consult} = req.body; //para indicarle cuales campos contiene el Json
+    const {phone,name,email,password,lat,lon,profession,subject_id,description,consult_day,begin_cosult,end_consult} = req.body; //para indicarle cuales campos contiene el Json
     const user_type = 2;
     const val = await pool.query('SELECT user_id FROM public.user WHERE email=$1',[email]);
     if (val.rowCount == 0){
         const response = await pool.query('INSERT INTO public.user (user_type,phone,name,email,password) VALUES ($1,$2,$3,$4,$5)', [user_type,phone,name,email,password]);
         const userId = await pool.query('SELECT user_id FROM public.user WHERE email=$1 AND password=$2',[email,password]);
         const useres = userId.rows[0].user_id;
-        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,profession,description,consult_day,bagin_consult,end_consult) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [parseInt(useres,10),lat,lon,profession,description,consult_day,begin_conslut,end_consult]);
+        const resp = await pool.query('INSERT INTO public.tutor (user_id,lat,lon,profession,description,consult_day,begin_cosult,end_consult) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [parseInt(useres,10),lat,lon,profession,description,consult_day,begin_cosult,end_consult]);
         //Captura el id del nuevo tutor registrado para asignarselo a la tabla tutor_x_subject de forma manual
         const tutorId = await pool.query('SELECT tutor_id FROM public.user INNER JOIN public.tutor ON public.user.user_id = public.tutor.user_id WHERE public.tutor.user_id = $1',[parseInt(useres,10)]);
         const tutorID = tutorId.rows[0].tutor_id;
@@ -198,7 +198,38 @@ const getDates = async (req,res) => {
     
 };
 
+const getRoomst = async (req,res) => {
+    const {tutor_id} = req.body;
+    const response = await pool.query('	SELECT public.user.picture,public.user.name, public.room_message.message,public.user.user_id FROM public.user INNER JOIN public.room ON (public.user.user_id = public.room.user_id) INNER JOIN public.room_message ON (public.room.room_id = public.room_message.room_id)  WHERE tutor_id = $1 LIMIT 1', [tutor_id])
+    
+    jwt.verify(req.token,'my_secret_key',(err,data)=>{
+        if(err){
+            res.sendStatus(403); 
+        }else{
+            res.status(200).json(response.rows);
+        }
+ 
+    });
+    
+};
+
+const getRoomsu = async (req,res) => {
+    const user_id = req.body;
+    const response = await pool.query('	SELECT public.user.picture, public.user.name, public.room_message.message, public.tutor.tutor_id FROM public.user INNER JOIN public.room ON (public.user.user_id = public.room.user_id) INNER JOIN public.room_message ON (public.room.room_id = public.room_message.room_id)  WHERE tutor_id = $1 LIMIT 1', [tutor_id])
+    
+    jwt.verify(req.token,'my_secret_key',(err,data)=>{
+        if(err){
+            res.sendStatus(403); 
+        }else{
+            res.status(200).json(response.rows);
+        }
+ 
+    });
+    
+};
+
 const prueba = (req,res) =>{
+
 
 
     //console.log(moment().format('MMMM Do YYYY HH:mm:ss'));
@@ -222,7 +253,10 @@ module.exports = {
         getSubject,
         setDate,
         getDates,
+        getRoomst,
+        getRoomsu,
         prueba
+
 };
 
 

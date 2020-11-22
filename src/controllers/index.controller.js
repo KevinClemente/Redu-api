@@ -177,23 +177,6 @@ const getTutors = async (req, res) => {
   );
 
   res.status(200).json(response.rows);
-
-  /* jwt.verify(req.token, "my_secret_key", (err, data) => {
-    if (err) {
-      res.sendStatus(403);
-    } else {
-      res.status(200).json(response.rows);
-    }
-  }); */
-};
-
-const getSubject = async (req, res) => {
-  const response = await pool.query("SELECT * FROM public.subject");
-  if (response == false) {
-    res.sendStatus(403);
-  } else {
-    res.status(200).json(response.rows);
-  }
 };
 
 const setDate = async (req, res) => {
@@ -206,7 +189,11 @@ const setDate = async (req, res) => {
     "INSERT INTO session (tutor_id,status,type,date,user_id) VALUES ($1,$2,$3,$4,$5)",
     [tutor_id, status, type, date, user_id]
   );
-
+  const session_id = await pool.query(
+    "SELECT session_id FROM session WHERE session.tutor_id = $1 AND session.user_id =$2 ORDER BY session_id DESC LIMIT 1"[
+      (tutor_id, user_id)
+    ]
+  );
   const verify = await pool.query(
     "SELECT * FROM public.room WHERE room.tutor_id=$1 AND room.user_id = $2",
     [tutor_id, user_id]
@@ -218,32 +205,43 @@ const setDate = async (req, res) => {
       "INSERT INTO room (tutor_id,user_id,end_room) VALUES ($1,$2,$3)",
       [tutor_id, user_id, end_room]
     );
+
     res
       .status(200)
       .json({
-        message:
+        MESSAGE:
           "SESSION RESERVADA CORRECTAMENTE TIENES 2 DIAS DE CHAT ILIMITADO",
-        session_id: 3,
+        session_id: session_id.rows[0].session_id,
       });
-    //"MANDAME EL SESSION ID AQUI Y EN EL ELSE CON EL FORMATO DE ARRIBA"
   } else {
     //UPDATE
     const room = await pool.query(
       "UPDATE public.room SET end_room=$1  WHERE tutor_id = $2 AND user_id = $3",
       [end_room, tutor_id, user_id]
     );
+
     res
       .status(200)
-      .send(
-        "BIENVENIDO NUEVAMENTE HEMOS HABILITADO 2 DIAS MAS DE CHAT ILIMITADO"
-      );
+      .json({
+        MESSAGE:
+          "BIENVENIDO NUEVAMENTE HEMOS HABILITADO 2 DIAS MAS DE CHAT ILIMITADO",
+        session_id: session_id.rows[0].session_id,
+      });
   }
 };
 
+const getSubject = async (req, res) => {
+  const response = await pool.query("SELECT * FROM public.subject");
+  if (response == false) {
+    res.sendStatus(403);
+  } else {
+    res.status(200).json(response.rows);
+  }
+};
 const getDates = async (req, res) => {
-  const user_id = req.body;
+  const { user_id } = req.body;
   const response = await pool.query(
-    "SELECT * FROM public.session WHERE user_id = $1",
+    "SELECT public.session.*, public.user.name AS TUTOR_NAME FROM public.session INNER JOIN public.tutor ON (session.tutor_id=tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE session.user_id = $1",
     [user_id]
   );
 

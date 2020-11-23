@@ -26,9 +26,9 @@ router.get("/home", getSubject);
 router.get("/subjects/:subjectId", getTutors);
 //router.get('/subjects/1',getTutors);
 router.post("/session", setDate);
-router.post("/dates", ensureToken, getDates);
+router.get("/dates/:userId", ensureToken, getDates);
 router.post("/singup-tutor", createTutor);
 router.get("/prueba", prueba);
-router.get("/rooms", ensureToken, getRoomst);
+router.get("/rooms/:userId", ensureToken, getRoomst);
 
 module.exports = router;

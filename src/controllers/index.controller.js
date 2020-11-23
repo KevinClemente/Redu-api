@@ -10,7 +10,7 @@ const pool = new Pool({
   user: "postgres",
   password: "root",
   database: "REDU",
-  port: "5433",
+  port: "5432",
 });
 
 //aca iran todas las funciones que se importaron dentro de ./routes/index.js y se almacenaron en una constante
@@ -117,10 +117,17 @@ const createTutor = async (req, res) => {
 
 const getTutorMaps = async (req, res) => {
   const response = await pool.query(
-    "SELECT name,email,phone,picture,lat,lon, profession FROM public.user INNER JOIN public.tutor ON public.tutor.user_id = public.user.user_id "
+    "SELECT  public.subject.name, public.subject.subject_id, count(public.tutor_x_subject.subject_id) AS tutors FROM public.subject INNER JOIN public.tutor_x_subject ON (public.subject.subject_id = public.tutor_x_subject.subject_id)  GROUP BY public.subject.subject_id, public.subject.name ORDER BY public.subject.subject_id"
   );
 
-  res.status(200).json(response.rows);
+  const tutors = await pool.query(
+    "SELECT public.tutor_x_subject.subject_id,public.tutor.lon, public.tutor.lat,public.tutor.tutor_id, public.tutor.lon, public.tutor.lat, public.user.name,public.user.email , public.user.phone, public.user.picture, public.tutor.profession, public.tutor.rating FROM public.user INNER JOIN public.tutor ON (public.user.user_id = public.tutor.user_id ) INNER JOIN Public.tutor_x_subject ON (public.tutor.tutor_id = public.tutor_x_subject.tutor_id ) INNER JOIN public.subject ON (public.tutor_x_subject.subject_id = public.subject.subject_id )"
+  );
+
+  res.status(200).json({
+    NumberTutors: response.rows,
+    Tutors: tutors.rows,
+  });
 };
 
 const login = async (req, res) => {
@@ -158,7 +165,7 @@ const protec = (req, res) => {
 
 function ensureToken(req, res, next) {
   const bearerHeader = req.headers["authorization"];
-  console.log("token", bearerHeader);
+
   if (typeof bearerHeader !== "undefined") {
     const bearer = bearerHeader.split(" ");
     const bearerToken = bearer[1];
@@ -238,8 +245,9 @@ const getSubject = async (req, res) => {
     res.status(200).json(response.rows);
   }
 };
+
 const getDates = async (req, res) => {
-  const { user_id } = req.body;
+  const user_id = req.params.userId;
   const response = await pool.query(
     "SELECT public.session.*, public.user.name AS TUTOR_NAME, public.user.picture, public.tutor.lat, public.tutor.lon FROM public.session INNER JOIN public.tutor ON (session.tutor_id=tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE session.user_id = $1",
     [user_id]
@@ -255,7 +263,7 @@ const getDates = async (req, res) => {
 };
 
 const getRoomst = async (req, res) => {
-  const { tutor_id } = req.body;
+  const tutor_id = req.params.userId;
   const response = await pool.query(
     "	SELECT public.user.picture,public.user.name, public.room_message.message,public.user.user_id FROM public.user INNER JOIN public.room ON (public.user.user_id = public.room.user_id) INNER JOIN public.room_message ON (public.room.room_id = public.room_message.room_id)  WHERE tutor_id = $1 LIMIT 1",
     [tutor_id]
@@ -286,13 +294,26 @@ const getRoomsu = async (req, res) => {
   });
 };
 
-const prueba = (req, res) => {
+const prueba = async (req, res) => {
   //console.log(moment().format('MMMM Do YYYY HH:mm:ss'));
   const date = moment().add(2, "days").format("YYYY-MM-DD HH:mm:ss");
+  const response = await pool.query(
+    "SELECT  public.subject.name, public.subject.subject_id, count(public.tutor_x_subject.subject_id) AS tutors FROM public.subject INNER JOIN public.tutor_x_subject ON (public.subject.subject_id = public.tutor_x_subject.subject_id)  GROUP BY public.subject.subject_id, public.subject.name ORDER BY public.subject.subject_id"
+  );
+
+  const tutors = await pool.query(
+    "SELECT public.tutor.tutor_id, public.tutor.lon, public.tutor.lat, public.user.name,public.user.email , public.user.phone, public.user.picture, public.tutor.profession, public.tutor.rating FROM public.user INNER JOIN public.tutor ON (public.user.user_id = public.tutor.user_id ) INNER JOIN Public.tutor_x_subject ON (public.tutor.tutor_id = public.tutor_x_subject.tutor_id ) INNER JOIN public.subject ON (public.tutor_x_subject.subject_id = public.subject.subject_id )"
+  );
 
   //var from = moment(dateFrom, hora)
   //const now = moment(date).add(7, 'days')
-  console.log(date);
+
+  //res.status(200).json(NumberTutors:{response.rows});
+
+  res.status(500).json({
+    NumberTutors: response.rows,
+    Tutors: tutors.rows,
+  });
 };
 
 module.exports = {

@@ -279,10 +279,10 @@ const getRoomst = async (req, res) => {
 };
 
 const getRoomsu = async (req, res) => {
-  const user_id = req.body;
-  const response = await pool.query(
-    "	SELECT public.user.picture, public.user.name, public.room_message.message, public.tutor.tutor_id FROM public.user INNER JOIN public.room ON (public.user.user_id = public.room.user_id) INNER JOIN public.room_message ON (public.room.room_id = public.room_message.room_id)  WHERE tutor_id = $1 LIMIT 1",
-    [tutor_id]
+  const  user_id  = req.params.userId;
+    const response = await pool.query(
+    "	SELECT public.user.picture,public.user.name, public.room_message.message,public.user.user_id FROM public.room_message INNER JOIN public.room ON (public.room_message.room_id = public.room.room_id) INNER JOIN public.tutor ON (public.room.tutor_id = public.tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE public.room.user_id = $1 LIMIT 1",
+    [user_id]
   );
 
   jwt.verify(req.token, "my_secret_key", (err, data) => {

@@ -15,6 +15,7 @@ const {
   createTutor,
   prueba,
   getRoomst,
+  getRoomsu
 } = require("../controllers/index.controller");
 
 //asignando rutas
@@ -29,6 +30,7 @@ router.post("/session", setDate);
 router.get("/dates/:userId", ensureToken, getDates);
 router.post("/singup-tutor", createTutor);
 router.get("/prueba", prueba);
-router.get("/rooms/:userId", ensureToken, getRoomst);
+router.get("/roomst/:tutorId", ensureToken, getRoomst);
+router.get("/roomsu/:userId", ensureToken, getRoomsu);
 
 module.exports = router;

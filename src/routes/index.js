@@ -26,7 +26,7 @@ router.get("/home", getSubject);
 router.get("/subjects/:subjectId", getTutors);
 //router.get('/subjects/1',getTutors);
 router.post("/session", setDate);
-router.get("/dates", ensureToken, getDates);
+router.post("/dates", ensureToken, getDates);
 router.post("/singup-tutor", createTutor);
 router.get("/prueba", prueba);
 router.get("/rooms", ensureToken, getRoomst);

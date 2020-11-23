@@ -158,7 +158,7 @@ const protec = (req, res) => {
 
 function ensureToken(req, res, next) {
   const bearerHeader = req.headers["authorization"];
-  console.log(bearerHeader);
+  console.log("token", bearerHeader);
   if (typeof bearerHeader !== "undefined") {
     const bearer = bearerHeader.split(" ");
     const bearerToken = bearer[1];
@@ -185,48 +185,48 @@ const setDate = async (req, res) => {
 
   //{"tutor_id":"1","status":"true","type":"true","date":"11/10/11","user_id":"1"}
 
-  const response = await pool.query(
-    "INSERT INTO session (tutor_id,status,type,date,user_id) VALUES ($1,$2,$3,$4,$5)",
-    [tutor_id, status, type, date, user_id]
-  );
-  const session_id = await pool.query(
-    "SELECT session_id FROM session WHERE session.tutor_id = $1 AND session.user_id =$2 ORDER BY session_id DESC LIMIT 1"[
-      (tutor_id, user_id)
-    ]
-  );
-  const verify = await pool.query(
-    "SELECT * FROM public.room WHERE room.tutor_id=$1 AND room.user_id = $2",
-    [tutor_id, user_id]
-  );
-
-  if (verify.rowCount == 0) {
-    //INSERT
-    const room = await pool.query(
-      "INSERT INTO room (tutor_id,user_id,end_room) VALUES ($1,$2,$3)",
-      [tutor_id, user_id, end_room]
+  try {
+    const response = await pool.query(
+      "INSERT INTO session (tutor_id,status,type,date,user_id) VALUES ($1,$2,$3,$4,$5)",
+      [tutor_id, status, type, date, user_id]
+    );
+    const session_id = await pool.query(
+      "SELECT session_id FROM session WHERE session.tutor_id = $1 AND session.user_id =$2 ORDER BY session_id DESC LIMIT 1",
+      [tutor_id, user_id]
+    );
+    const verify = await pool.query(
+      "SELECT * FROM public.room WHERE room.tutor_id=$1 AND room.user_id = $2",
+      [tutor_id, user_id]
     );
 
-    res
-      .status(200)
-      .json({
+    if (verify.rowCount == 0) {
+      //INSERT
+      const room = await pool.query(
+        "INSERT INTO room (tutor_id,user_id,end_room) VALUES ($1,$2,$3)",
+        [tutor_id, user_id, end_room]
+      );
+
+      res.status(200).json({
         MESSAGE:
           "SESSION RESERVADA CORRECTAMENTE TIENES 2 DIAS DE CHAT ILIMITADO",
         session_id: session_id.rows[0].session_id,
       });
-  } else {
-    //UPDATE
-    const room = await pool.query(
-      "UPDATE public.room SET end_room=$1  WHERE tutor_id = $2 AND user_id = $3",
-      [end_room, tutor_id, user_id]
-    );
+    } else {
+      //UPDATE
+      const room = await pool.query(
+        "UPDATE public.room SET end_room=$1  WHERE tutor_id = $2 AND user_id = $3",
+        [end_room, tutor_id, user_id]
+      );
 
-    res
-      .status(200)
-      .json({
+      res.status(200).json({
         MESSAGE:
           "BIENVENIDO NUEVAMENTE HEMOS HABILITADO 2 DIAS MAS DE CHAT ILIMITADO",
         session_id: session_id.rows[0].session_id,
       });
+    }
+  } catch (error) {
+    console.log("Este es el error", error);
+    res.status(200).json({ message: "SE HA PRESENTADO UN ERROR" });
   }
 };
 
@@ -241,7 +241,7 @@ const getSubject = async (req, res) => {
 const getDates = async (req, res) => {
   const { user_id } = req.body;
   const response = await pool.query(
-    "SELECT public.session.*, public.user.name AS TUTOR_NAME FROM public.session INNER JOIN public.tutor ON (session.tutor_id=tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE session.user_id = $1",
+    "SELECT public.session.*, public.user.name AS TUTOR_NAME, public.user.picture, public.tutor.lat, public.tutor.lon FROM public.session INNER JOIN public.tutor ON (session.tutor_id=tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE session.user_id = $1",
     [user_id]
   );
 

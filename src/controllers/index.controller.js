@@ -294,27 +294,23 @@ const getRoomsu = async (req, res) => {
   });
 };
 
-const prueba = async (req, res) => {
-  //console.log(moment().format('MMMM Do YYYY HH:mm:ss'));
-  const date = moment().add(2, "days").format("YYYY-MM-DD HH:mm:ss");
-  const response = await pool.query(
-    "SELECT  public.subject.name, public.subject.subject_id, count(public.tutor_x_subject.subject_id) AS tutors FROM public.subject INNER JOIN public.tutor_x_subject ON (public.subject.subject_id = public.tutor_x_subject.subject_id)  GROUP BY public.subject.subject_id, public.subject.name ORDER BY public.subject.subject_id"
+
+const getMessage = async (req, res) => {
+  const {room_id,sender_id,message} = req.body;
+  const room_message = await pool.query(
+    'INSERT INTO room_message (room_id,sender_id,message) VALUES ($1,$2,$3)',
+    [room_id,sender_id,message]   
+  );
+  const chat = await pool.query(
+    'SELECT * FROM room INNER JOIN room_message ON (room.room_id = room_message.room_id) WHERE room.room_id = $1',
+    [room_id]   
   );
 
-  const tutors = await pool.query(
-    "SELECT public.tutor.tutor_id, public.tutor.lon, public.tutor.lat, public.user.name,public.user.email , public.user.phone, public.user.picture, public.tutor.profession, public.tutor.rating FROM public.user INNER JOIN public.tutor ON (public.user.user_id = public.tutor.user_id ) INNER JOIN Public.tutor_x_subject ON (public.tutor.tutor_id = public.tutor_x_subject.tutor_id ) INNER JOIN public.subject ON (public.tutor_x_subject.subject_id = public.subject.subject_id )"
-  );
-
-  //var from = moment(dateFrom, hora)
-  //const now = moment(date).add(7, 'days')
-
-  //res.status(200).json(NumberTutors:{response.rows});
-
-  res.status(500).json({
-    NumberTutors: response.rows,
-    Tutors: tutors.rows,
-  });
+  res.status(200).json(chat.rows);
 };
+
+
+
 
 module.exports = {
   getTutorMaps,
@@ -329,5 +325,5 @@ module.exports = {
   getDates,
   getRoomst,
   getRoomsu,
-  prueba,
+  getMessage,
 };

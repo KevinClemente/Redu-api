@@ -13,7 +13,7 @@ const {
   setDate,
   getDates,
   createTutor,
-  prueba,
+  getMessage,
   getRoomst,
   getRoomsu
 } = require("../controllers/index.controller");
@@ -29,7 +29,7 @@ router.get("/subjects/:subjectId", getTutors);
 router.post("/session", setDate);
 router.get("/dates/:userId", ensureToken, getDates);
 router.post("/singup-tutor", createTutor);
-router.get("/prueba", prueba);
+router.get("/message", getMessage);
 router.get("/roomst/:tutorId", ensureToken, getRoomst);
 router.get("/roomsu/:userId", ensureToken, getRoomsu);
 

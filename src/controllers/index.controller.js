@@ -10,7 +10,7 @@ const pool = new Pool({
   user: "postgres",
   password: "root",
   database: "REDU",
-  port: "5432",
+  port: "5433",
 });
 
 //aca iran todas las funciones que se importaron dentro de ./routes/index.js y se almacenaron en una constante
@@ -188,6 +188,11 @@ const getTutors = async (req, res) => {
 
 const setDate = async (req, res) => {
   const { tutor_id, status, type, date, user_id } = req.body;
+  console.log("tutor id ", tutor_id);
+  const tutor_user = await pool.query(
+    "SELECT public.user.user_id, public.tutor.tutor_id, public.tutor.lon, public.tutor.lat, public.user.name,public.user.email , public.user.phone, public.user.picture, public.tutor.profession, public.tutor.rating  FROM public.user INNER JOIN public.tutor ON (public.user.user_id = public.tutor.user_id ) WHERE public.tutor.tutor_id = $1",
+    [tutor_id]
+  );
   const end_room = moment(date).add(2, "days").format("YYYY-MM-DD HH:mm:ss");
 
   //{"tutor_id":"1","status":"true","type":"true","date":"11/10/11","user_id":"1"}
@@ -209,8 +214,13 @@ const setDate = async (req, res) => {
     if (verify.rowCount == 0) {
       //INSERT
       const room = await pool.query(
-        "INSERT INTO room (tutor_id,user_id,end_room) VALUES ($1,$2,$3)",
+        "INSERT INTO room (tutor_id,user_id,end_room) VALUES ($1,$2,$3) RETURNING *",
         [tutor_id, user_id, end_room]
+      );
+      console.log("user tutor id", tutor_user.rows[0].user_id);
+      const mesage = await pool.query(
+        "INSERT INTO room_message(room_id, sender_id, message) VALUES($1,$2,'Bienvenido')",
+        [room.rows[0].room_id, tutor_user.rows[0].user_id]
       );
 
       res.status(200).json({
@@ -221,8 +231,15 @@ const setDate = async (req, res) => {
     } else {
       //UPDATE
       const room = await pool.query(
-        "UPDATE public.room SET end_room=$1  WHERE tutor_id = $2 AND user_id = $3",
+        "UPDATE public.room SET end_room=$1  WHERE tutor_id = $2 AND user_id = $3 RETURNING *",
         [end_room, tutor_id, user_id]
+      );
+
+      console.log("room update", room);
+
+      const mesage = await pool.query(
+        "INSERT INTO room_message(room_id, sender_id, message) VALUES($1,$2,'Bienvenido')",
+        [room.rows[0].room_id, tutor_user.rows[0].user_id]
       );
 
       res.status(200).json({
@@ -279,40 +296,69 @@ const getRoomst = async (req, res) => {
 };
 
 const getRoomsu = async (req, res) => {
-  const  user_id  = req.params.userId;
-    const response = await pool.query(
-    "	SELECT public.user.picture,public.user.name, public.room_message.message,public.user.user_id FROM public.room_message INNER JOIN public.room ON (public.room_message.room_id = public.room.room_id) INNER JOIN public.tutor ON (public.room.tutor_id = public.tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE public.room.user_id = $1 LIMIT 1",
+  const user_id = req.params.userId;
+  console.log("user", user_id);
+  const response = await pool.query(
+    "	SELECT public.room.end_room, public.room.room_id,public.user.picture,public.user.name, public.room_message.message,public.user.user_id FROM public.room_message INNER JOIN public.room ON (public.room_message.room_id = public.room.room_id) INNER JOIN public.tutor ON (public.room.tutor_id = public.tutor.tutor_id) INNER JOIN public.user ON (public.tutor.user_id = public.user.user_id) WHERE public.room.user_id = $1",
     [user_id]
   );
+  console.log("ESta es la response", response);
 
-  jwt.verify(req.token, "my_secret_key", (err, data) => {
+  res.status(200).json(response.rows);
+
+  /* jwt.verify(req.token, "my_secret_key", (err, data) => {
     if (err) {
       res.sendStatus(403);
     } else {
       res.status(200).json(response.rows);
     }
-  });
+  }); */
 };
 
-
 const getMessage = async (req, res) => {
-  const {room_id,sender_id,message} = req.body;
-  const room_message = await pool.query(
-    'INSERT INTO room_message (room_id,sender_id,message) VALUES ($1,$2,$3)',
-    [room_id,sender_id,message]   
-  );
+  const { roomId } = req.params;
   const chat = await pool.query(
-    'SELECT * FROM room INNER JOIN room_message ON (room.room_id = room_message.room_id) WHERE room.room_id = $1',
-    [room_id]   
+    "SELECT * FROM room INNER JOIN room_message ON (room.room_id = room_message.room_id) WHERE room.room_id = $1",
+    [roomId]
   );
 
   res.status(200).json(chat.rows);
 };
 
+const setMessage = async (req, res) => {
+  const {
+    room_id,
+    sender_id,
+    message,
+    channelIdentifier,
+    picture,
+    name,
+  } = req.body;
+  const room_message = await pool.query(
+    "INSERT INTO room_message (room_id,sender_id,message) VALUES ($1,$2,$3) RETURNING *",
+    [room_id, sender_id, message]
+  );
 
+  body.io.emit(channelIdentifier, {
+    data: [
+      {
+        _id: room_message.rows[0].room_message_id,
+        text: message,
+        createdAt: new Date(),
+        user: {
+          _id: sender_id,
+          name: name,
+          avatar: picture,
+        },
+      },
+    ],
+  });
 
+  res.status(200).json(chat.rows);
+};
 
 module.exports = {
+  setMessage,
   getTutorMaps,
   createTutor,
   createUsers,

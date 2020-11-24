@@ -334,9 +334,10 @@ const setMessage = async (req, res) => {
     picture,
     name,
   } = req.body;
+  const hour = moment().format("YYYY-MM-DD HH:mm:ss")
   const room_message = await pool.query(
-    "INSERT INTO room_message (room_id,sender_id,message) VALUES ($1,$2,$3) RETURNING *",
-    [room_id, sender_id, message]
+    "INSERT INTO room_message (room_id,sender_id,message,hour) VALUES ($1,$2,$3,$4) RETURNING *",
+    [room_id, sender_id, message,hour]
   );
 
   body.io.emit(channelIdentifier, {
